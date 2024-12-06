@@ -22,6 +22,29 @@ var directions = [][]int{
 	{-1, -1}, // diagonal up left
 }
 
+var patterns = [][][]string{
+	{
+		{"M", ".", "S"},
+		{".", "A", "."},
+		{"M", ".", "S"},
+	},
+	{
+		{"S", ".", "M"},
+		{".", "A", "."},
+		{"S", ".", "M"},
+	},
+	{
+		{"M", ".", "M"},
+		{".", "A", "."},
+		{"S", ".", "S"},
+	},
+	{
+		{"S", ".", "S"},
+		{".", "A", "."},
+		{"M", ".", "M"},
+	},
+}
+
 // Read file in as a 2D list
 func readFile(filename string) ([][]string, error) {
 	file, err := os.Open(filename)
@@ -53,9 +76,8 @@ func checkXmasDirection(grid [][]string, y, x, dy, dx int) bool {
 	cols := len(grid[0])
 
 	for k := 0; k < len(xmas); k++ {
-		// Next y position
+		// Next positions
 		ny := y + k*dy
-		// Next x position
 		nx := x + k*dx
 		// Return false if new position is out of bounds
 		if ny < 0 || ny >= rows || nx < 0 || nx >= cols {
@@ -85,6 +107,47 @@ func countXmas(grid [][]string) int {
 	return count
 }
 
+func checkXmasPattern(grid [][]string, y, x int, pattern [][]string) bool {
+	rows := len(grid)
+	cols := len(grid[0])
+	patternRows := len(pattern)
+	patternCols := len(pattern[0])
+
+	// Iterate through the pattern
+	for i := 0; i < patternRows; i++ {
+		for j := 0; j < patternCols; j++ {
+			// Calculate new indices in the grid
+			ny := y + i
+			nx := x + j
+			// Return false if new position is out of bounds
+			if ny < 0 || ny >= rows || nx < 0 || nx >= cols {
+				return false
+			}
+			if pattern[i][j] != "." && pattern[i][j] != grid[ny][nx] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func countXmasPattern(grid [][]string) int {
+	count := 0
+	// Iterate through rows
+	for i := 0; i < len(grid); i++ {
+		// Iterate through columns
+		for j := 0; j < len(grid[i]); j++ {
+			// Iterate through valid patterns
+			for _, pattern := range patterns {
+				if checkXmasPattern(grid, i, j, pattern) {
+					count += 1
+				}
+			}
+		}
+	}
+	return count
+}
+
 func main() {
 	puzzleGrid, err := readFile(filename)
 	if err != nil {
@@ -92,6 +155,11 @@ func main() {
 		return
 	}
 
+	// Part 1
 	occurances := countXmas(puzzleGrid)
 	fmt.Printf("Number of 'XMAS' instances in the word search: %d\n", occurances)
+
+	// Part 2
+	patterns := countXmasPattern(puzzleGrid)
+	fmt.Printf("Number of 'X-MAS' patterns in the word search: %d\n", patterns)
 }
