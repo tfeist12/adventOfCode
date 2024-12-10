@@ -108,6 +108,36 @@ func isValidUpdate(rules map[int][]int, update []int) bool {
 	return true
 }
 
+// Fix the update list so that it is valid based on the rules
+func sortUpdate(rules map[int][]int, update []int) []int {
+	position := make(map[int]int)
+	for i, num := range update {
+		position[num] = i
+	}
+
+	// Function to swap elements in the update list
+	swap := func(i, j int) {
+		update[i], update[j] = update[j], update[i]
+		position[update[i]] = i
+		position[update[j]] = j
+	}
+
+	// Iterate through the rules and fix the update list
+	for !isValidUpdate(rules, update) {
+		for key, values := range rules {
+			for _, value := range values {
+				keyPos, keyExists := position[key]
+				valuePos, valueExists := position[value]
+				if keyExists && valueExists && valuePos < keyPos {
+					swap(keyPos, valuePos)
+				}
+			}
+		}
+	}
+
+	return update
+}
+
 func main() {
 	rules, updates, err := readFile(filename)
 	if err != nil {
@@ -115,12 +145,20 @@ func main() {
 		return
 	}
 
-	middleSum := 0
+	validMiddleSum := 0
 	for _, update := range updates {
 		if isValidUpdate(rules, update) {
-			middleSum += getMiddlePage(update)
+			validMiddleSum += getMiddlePage(update)
 		}
 	}
+	fmt.Printf("Sum of valid update middle pages: %d\n", validMiddleSum)
 
-	fmt.Printf("Sum of middle pages: %d\n", middleSum)
+	sortedMiddleSum := 0
+	for _, update := range updates {
+		if !isValidUpdate(rules, update) {
+			sortedUpdate := sortUpdate(rules, update)
+			sortedMiddleSum += getMiddlePage(sortedUpdate)
+		}
+	}
+	fmt.Printf("Sum of sorted update middle pages: %d\n", sortedMiddleSum)
 }
