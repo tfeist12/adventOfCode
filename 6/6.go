@@ -11,6 +11,7 @@ const (
 	exampleFilename = "example.txt"
 	filename        = "input.txt"
 
+	empty    = "."
 	visited  = "X"
 	obstacle = "#"
 
@@ -78,6 +79,24 @@ func getDirection(guard string) direction {
 	}
 }
 
+// Get the guard character based on the direction
+func getGuard(dir direction) string {
+	switch dir {
+
+	case upDirection:
+		return upGuard
+	case rightDirection:
+		return rightGuard
+	case downDirection:
+		return downGuard
+	case leftDirection:
+		return leftGuard
+	default:
+		// Invalid direction
+		return ""
+	}
+}
+
 // Get the position of the guard on the map
 func getPosition(mapData [][]string, guard string) (position, string) {
 	for i, row := range mapData {
@@ -112,86 +131,23 @@ func rotateRight(mapData [][]string, guardPos position, guardDir direction) dire
 	}
 }
 
-// Move the guard up or rotate if they hit an obstacle
-func moveUp(mapData [][]string, pos position) (position, direction) {
-	newPos := position{pos.x, pos.y - 1}
+// Move the guard in the specified direction or rotate if they hit an obstacle
+func moveGuard(mapData [][]string, pos position, dir direction) (position, direction) {
+	newPos := position{pos.x + dir.dx, pos.y + dir.dy}
 
 	if !isOnMap(mapData, newPos) {
 		// Update current position to be visited
 		mapData[pos.y][pos.x] = visited
-		return newPos, upDirection
+		return newPos, dir
 	} else if mapData[newPos.y][newPos.x] != obstacle {
 		// Update the previous position to visited
 		mapData[pos.y][pos.x] = visited
 		// Update the new position to the guard
-		mapData[newPos.y][newPos.x] = upGuard
-		return newPos, upDirection
+		mapData[newPos.y][newPos.x] = getGuard(dir)
+		return newPos, dir
 	} else {
 		// Rotate the guard to the right
-		newDir := rotateRight(mapData, pos, upDirection)
-		return pos, newDir
-	}
-}
-
-// Move the guard right or rotate if they hit an obstacle
-func moveRight(mapData [][]string, pos position) (position, direction) {
-	newPos := position{pos.x + 1, pos.y}
-
-	if !isOnMap(mapData, newPos) {
-		// Update current position to be visited
-		mapData[pos.y][pos.x] = visited
-		return newPos, rightDirection
-	} else if mapData[newPos.y][newPos.x] != obstacle {
-		// Update the previous position to visited
-		mapData[pos.y][pos.x] = visited
-		// Update the new position to the guard
-		mapData[newPos.y][newPos.x] = rightGuard
-		return newPos, rightDirection
-	} else {
-		// Rotate the guard to the right
-		newDir := rotateRight(mapData, pos, rightDirection)
-		return pos, newDir
-	}
-}
-
-// Move the guard down or rotate if they hit an obstacle
-func moveDown(mapData [][]string, pos position) (position, direction) {
-	newPos := position{pos.x, pos.y + 1}
-
-	if !isOnMap(mapData, newPos) {
-		// Update current position to be visited
-		mapData[pos.y][pos.x] = visited
-		return newPos, downDirection
-	} else if mapData[newPos.y][newPos.x] != obstacle {
-		// Update the previous position to visited
-		mapData[pos.y][pos.x] = visited
-		// Update the new position to the guard
-		mapData[newPos.y][newPos.x] = downGuard
-		return newPos, downDirection
-	} else {
-		// Rotate the guard to the right
-		newDir := rotateRight(mapData, pos, downDirection)
-		return pos, newDir
-	}
-}
-
-// Move the guard left or rotate if they hit an obstacle
-func moveLeft(mapData [][]string, pos position) (position, direction) {
-	newPos := position{pos.x - 1, pos.y}
-
-	if !isOnMap(mapData, newPos) {
-		// Update current position to be visited
-		mapData[pos.y][pos.x] = visited
-		return newPos, leftDirection
-	} else if mapData[newPos.y][newPos.x] != obstacle {
-		// Update the previous position to visited
-		mapData[pos.y][pos.x] = visited
-		// Update the new position to the guard
-		mapData[newPos.y][newPos.x] = leftGuard
-		return newPos, leftDirection
-	} else {
-		// Rotate the guard to the right
-		newDir := rotateRight(mapData, pos, leftDirection)
+		newDir := rotateRight(mapData, pos, dir)
 		return pos, newDir
 	}
 }
@@ -224,6 +180,46 @@ func printMap(mapData [][]string) {
 	for _, row := range mapData {
 		fmt.Println(strings.Join(row, ""))
 	}
+	fmt.Println()
+}
+
+// Check if adding an obstacle creates a loop
+func createsLoop(mapData [][]string, obstaclePos position) bool {
+	// Add the obstacle
+	mapData[obstaclePos.y][obstaclePos.x] = obstacle
+
+	// Get the initial position and direction of the guard
+	guardPos, guard := getPosition(mapData, upGuard)
+	guardDir := getDirection(guard)
+
+	visitedStates := make(map[position]map[direction]bool)
+
+	for {
+		// Uncomment to view the guard moving
+		// printMap(mapData)
+
+		if !isOnMap(mapData, guardPos) {
+			return false
+		}
+		if visitedStates[guardPos] == nil {
+			visitedStates[guardPos] = make(map[direction]bool)
+		}
+		if visitedStates[guardPos][guardDir] {
+			return true
+		}
+		visitedStates[guardPos][guardDir] = true
+
+		guardPos, guardDir = moveGuard(mapData, guardPos, guardDir)
+	}
+}
+
+func copyMap(original [][]string) [][]string {
+	mapDataCopy := make([][]string, len(original))
+	for i := range original {
+		mapDataCopy[i] = make([]string, len(original[i]))
+		copy(mapDataCopy[i], original[i])
+	}
+	return mapDataCopy
 }
 
 func main() {
@@ -233,40 +229,42 @@ func main() {
 		return
 	}
 
-	// Get the inital position and direction of the guard
+	// Save the original map
+	mapDataCopy := copyMap(mapData)
+
+	// Part 1: Count the number of visited positions
 	guardPos, guard := getPosition(mapData, upGuard)
 	guardDir := getDirection(guard)
 
 	for {
 		// Uncomment to view the guard moving
 		// printMap(mapData)
-		// fmt.Println()
 
 		if !isOnMap(mapData, guardPos) {
-			// fmt.Println("Left the map!")
 			visitedPositions := countVisited(mapData)
 			fmt.Printf("The guard visited '%d' positions\n", visitedPositions)
-			return
+			// Reset the map to the original state before part 2
+			mapData = copyMap(mapDataCopy)
+			break
 		}
-		if guardDir == upDirection {
-			// fmt.Println("Moving up")
-			guardPos, guardDir = moveUp(mapData, guardPos)
-			continue
-		}
-		if guardDir == rightDirection {
-			// fmt.Println("Moving right")
-			guardPos, guardDir = moveRight(mapData, guardPos)
-			continue
-		}
-		if guardDir == downDirection {
-			// fmt.Println("Moving down")
-			guardPos, guardDir = moveDown(mapData, guardPos)
-			continue
-		}
-		if guardDir == leftDirection {
-			// fmt.Println("Moving left")
-			guardPos, guardDir = moveLeft(mapData, guardPos)
-			continue
+		guardPos, guardDir = moveGuard(mapData, guardPos, guardDir)
+	}
+
+	// Part 2: Count the number of positions where adding an obstace creates a loop
+	loopObstacles := 0
+	for i, row := range mapData {
+		for j, char := range row {
+			// Reset the map to the original state before next iteration
+			mapData = copyMap(mapDataCopy)
+			if char == empty {
+				if createsLoop(mapData, position{j, i}) {
+					loopObstacles++
+				}
+			}
 		}
 	}
+	fmt.Printf(
+		"There are '%d' positions where an obstacle can be added to create a loop\n",
+		loopObstacles,
+	)
 }
