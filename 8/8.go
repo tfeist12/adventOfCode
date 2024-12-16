@@ -56,16 +56,23 @@ func isValidPosition(mapData [][]string, pos position) bool {
 	return pos.x >= 0 && pos.x < len(mapData) && pos.y >= 0 && pos.y < len(mapData[0])
 }
 
-func countAntinodePositions(mapData [][]string) (int, [][]string) {
-	antiNodeMap := make([][]string, len(mapData))
+// Create an empty map of the same size as the input map
+func createEmptyMap(mapData [][]string) [][]string {
+	emptyMap := make([][]string, len(mapData))
 	for i := range mapData {
-		antiNodeMap[i] = make([]string, len(mapData[i]))
+		emptyMap[i] = make([]string, len(mapData[i]))
 		for j := range mapData[i] {
-			antiNodeMap[i][j] = "."
+			emptyMap[i][j] = "."
 		}
 	}
+	return emptyMap
+}
 
-	count := 0
+// Return a map of antinode positions
+func getAntiNodeMap(mapData [][]string) [][]string {
+	antiNodeMap := createEmptyMap(mapData)
+
+	// Iterate over the map
 	for i, row := range mapData {
 		for j, char := range row {
 			// Only iterate if character is not an empty space
@@ -80,7 +87,6 @@ func countAntinodePositions(mapData [][]string) (int, [][]string) {
 							if isValidPosition(mapData, openPos) &&
 								antiNodeMap[openPos.x][openPos.y] != "#" {
 								antiNodeMap[openPos.x][openPos.y] = "#"
-								count++
 							}
 						}
 					}
@@ -88,9 +94,59 @@ func countAntinodePositions(mapData [][]string) (int, [][]string) {
 			}
 		}
 	}
-	return count, antiNodeMap
+	return antiNodeMap
 }
 
+// Return a map of antinode positions
+// This version uses T frequency signals for the model
+func getAntiNodeMapT(mapData [][]string) [][]string {
+	antiNodeMap := createEmptyMap(mapData)
+
+	// Iterate over the map
+	for i, row := range mapData {
+		for j, col := range row {
+			if col != "." && col != "#" {
+				char := col
+				for k, row2 := range mapData {
+					for l, col2 := range row2 {
+						if col2 == char && (i != k || j != l) {
+							antiNodeMap[i][j] = "#"
+							dist := calculateDistance(position{i, j}, position{k, l})
+							// Check for open positions beyond the second antenna
+							multiplier := 1
+							for {
+								openPos := position{k + dist.dx*multiplier, l + dist.dy*multiplier}
+								if !isValidPosition(mapData, openPos) {
+									break
+								}
+								if antiNodeMap[openPos.x][openPos.y] == "." {
+									antiNodeMap[openPos.x][openPos.y] = "#"
+								}
+								multiplier++
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return antiNodeMap
+}
+
+// Count all instances of '#' in the map
+func countAntiNodePositions(mapData [][]string) int {
+	count := 0
+	for _, row := range mapData {
+		for _, char := range row {
+			if char == "#" {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// Print the map
 func printMap(mapData [][]string) {
 	for _, row := range mapData {
 		fmt.Println(strings.Join(row, ""))
@@ -105,7 +161,13 @@ func main() {
 		return
 	}
 
-	count, antiNodeMap := countAntinodePositions(mapData)
+	// Part 1
+	antiNodeMap := getAntiNodeMap(mapData)
+	count := countAntiNodePositions(antiNodeMap)
 	fmt.Printf("Number of antinode positions: %d\n", count)
-	printMap(antiNodeMap)
+
+	// Part 2
+	antiNodeMap = getAntiNodeMapT(mapData)
+	count = countAntiNodePositions(antiNodeMap)
+	fmt.Printf("Number of antinode positions using T frequency: %d\n", count)
 }
