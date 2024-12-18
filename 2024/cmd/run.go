@@ -17,6 +17,7 @@ import (
 	"aoc/src/day06"
 	"aoc/src/day07"
 	"aoc/src/day08"
+	"aoc/src/day09"
 )
 
 var (
@@ -93,6 +94,12 @@ var runnerCmd = &cobra.Command{
 				day08.Part1(file)
 			} else {
 				day08.Part2(file)
+			}
+		case 9:
+			if part == 1 {
+				day09.Part1(file)
+			} else {
+				day09.Part2(file)
 			}
 		default:
 			log.Fatalf("Solution for day %d is not implemented yet.", day)
